@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>המחשת טרנספורמציות לינאריות</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Assistant', sans-serif;
+            background-color: #f1f5f9;
+        }
+        
+        input[type=range] {
+            direction: ltr; /* Ensure sliders work intuitively left-to-right */
+        }
+    </style>
+</head>
+<body class="text-slate-800 pb-12">
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <h1 class="text-6xl md:text-5xl sm:text-4xl font-bold text-slate-900 mb-4 text-transparent bg-clip-text bg-gradient-to-l from-orange-600 to-red-600">
+                טרנספורמציות לינאריות בסטטיסטיקה 
+            </h1>
+            <h2 class="text-4xl font-bold text-slate-700 mb-4" dir="ltr">y = mx + b</h2>
+        </header>
+
+        <!-- Main Content Wrapper: Stats (Right), Graph (Center), Controls (Left) -->
+        <div class="flex flex-col lg:flex-row gap-4 xl:gap-6 mb-10 w-full items-start">
+            
+            <!-- Right Column: Stats (Data - Right side in RTL) -->
+            <div class="w-full lg:w-1/4 flex flex-col gap-6">
+                <!-- Orig Stats -->
+                <div class="bg-orange-50 border border-orange-200 rounded-xl p-5 text-center text-3xl lg:text-2xl xl:text-3xl font-bold text-orange-900 space-y-4" dir="ltr">
+                    <div class="text-xl xl:text-2xl mb-2 underline decoration-orange-300 decoration-2 underline-offset-4" dir="rtl">נתונים מקוריים (x):</div>
+                    <div>x̄ = <span id="origMean">0</span></div>
+                    <div><span dir="rtl">חציון (Md)</span> = <span id="origMed">0</span></div>
+                    <div><span dir="rtl">השכיח (Mo)</span> = <span id="origMode">0</span></div>
+                    <div><span dir="rtl">טווח (R)</span> = <span id="origRange">0</span></div>
+                    <div>S<sub>x</sub> = <span id="origSD">0</span></div>
+                    <div>S<sup>2</sup><sub>x</sub> = <span id="origVar">0</span></div>
+                </div>
+                <!-- Trans Stats -->
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-5 text-center text-3xl lg:text-2xl xl:text-3xl font-bold text-blue-900 space-y-4" dir="ltr">
+                    <div class="text-xl xl:text-2xl mb-2 underline decoration-blue-300 decoration-2 underline-offset-4" dir="rtl">לאחר טרנספורמציה (y):</div>
+                    <div>ȳ = <span id="transMean">0</span></div>
+                    <div><span dir="rtl">חציון (Md)</span> = <span id="transMed">0</span></div>
+                    <div><span dir="rtl">השכיח (Mo)</span> = <span id="transMode">0</span></div>
+                    <div><span dir="rtl">טווח (R)</span> = <span id="transRange">0</span></div>
+                    <div>S<sub>y</sub> = <span id="transSD">0</span></div>
+                    <div>S<sup>2</sup><sub>y</sub> = <span id="transVar">0</span></div>
+                </div>
+            </div>
+
+            <!-- Center Column: Unified Graph -->
+            <div class="w-full lg:w-1/2 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 xl:p-5 flex flex-col h-full">
+                <h2 class="text-2xl xl:text-3xl font-bold text-slate-800 text-center mb-4">השוואת התפלגויות במערכת צירים אחת</h2>
+                
+                <!-- Legend -->
+                <div class="flex justify-center gap-4 xl:gap-8 mb-4 flex-wrap">
+                    <div class="flex items-center gap-2 text-lg xl:text-xl font-bold text-orange-600">
+                        <span class="w-4 h-4 bg-orange-600 rounded-full inline-block"></span> מקורי (x)
+                    </div>
+                    <div class="flex items-center gap-2 text-lg xl:text-xl font-bold text-blue-600">
+                        <span class="w-4 h-4 bg-blue-600 rounded-full inline-block"></span> לאחר טרנספורמציה (y)
+                    </div>
+                </div>
+
+                <!-- Canvas Container -->
+                <div class="w-full h-80 md:h-[450px] lg:h-[480px] bg-slate-50 rounded border mb-2 overflow-hidden">
+                    <canvas id="mainCanvas" class="w-full h-full block cursor-grab active:cursor-grabbing touch-none"></canvas>
+                </div>
+            </div>
+
+            <!-- Left Column: Controls -->
+            <div class="w-full lg:w-1/4 flex flex-col gap-6 sticky top-8">
+                <div class="bg-white rounded-2xl shadow-md border border-slate-200 p-5 xl:p-6 w-full flex flex-col gap-8">
+                    <!-- Add/Subtract (b) -->
+                    <div class="w-full">
+                        <label class="flex flex-col xl:flex-row xl:justify-between items-center mb-4 font-bold text-slate-700 text-xl xl:text-2xl gap-2">
+                            <span>הוספה/חיסור (b):</span>
+                            <span id="bValueDisplay" class="bg-blue-100 text-blue-800 py-1 px-4 rounded-xl text-2xl font-bold" dir="ltr">0</span>
+                        </label>
+                        <input type="range" id="bSlider" min="-50" max="50" step="1" value="0" class="w-full h-10 md:h-8 bg-slate-200 rounded-lg cursor-pointer accent-blue-600">
+                        <div class="flex justify-between text-base xl:text-xl text-slate-500 mt-2 font-semibold px-1" dir="ltr">
+                            <span>-50</span>
+                            <span>-25</span>
+                            <span>0</span>
+                            <span>+25</span>
+                            <span>+50</span>
+                        </div>
+                    </div>
+
+                    <!-- Multiply/Divide (m) -->
+                    <div class="w-full">
+                        <label class="flex flex-col xl:flex-row xl:justify-between items-center mb-4 font-bold text-slate-700 text-xl xl:text-2xl gap-2">
+                            <span>כפל/חילוק (m):</span>
+                            <span id="mValueDisplay" class="bg-red-100 text-red-800 py-1 px-4 rounded-xl text-2xl font-bold" dir="ltr">1.0</span>
+                        </label>
+                        <input type="range" id="mSlider" min="-5" max="5" step="0.5" value="1" class="w-full h-10 md:h-8 bg-slate-200 rounded-lg cursor-pointer accent-red-600">
+                        <div class="flex justify-between text-base xl:text-xl text-slate-500 mt-2 font-semibold px-1" dir="ltr">
+                            <span>-5</span>
+                            <span>-2.5</span>
+                            <span>0</span>
+                            <span>+2.5</span>
+                            <span>+5</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reset Button -->
+                <button id="resetBtn" class="text-white text-2xl xl:text-3xl font-bold bg-emerald-500 hover:bg-emerald-600 px-6 py-4 rounded-xl border border-emerald-600 transition shadow-lg flex items-center justify-center gap-3 active:scale-95 w-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 xl:h-10 xl:w-10" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                    </svg>
+                    רענון
+                </button>
+            </div>
+            
+        </div>
+
+        <!-- Theory Box (Bottom) -->
+        <div class="flex flex-col items-center gap-10 mb-10">
+            <div class="w-full max-w-4xl">
+                <div class="bg-emerald-50 rounded-2xl shadow-sm border border-emerald-200 p-8 flex flex-col justify-center items-center">
+                    <h3 class="text-4xl font-bold text-emerald-900 mb-8 border-b border-emerald-200 pb-4 w-full text-center">מסקנות</h3>
+                    <div class="text-4xl sm:text-3xl md:text-4xl text-emerald-800 space-y-8 font-bold leading-relaxed w-full text-center" dir="ltr">
+                        <div id="theoryEq1">y = mx + b</div>
+                        <div id="theoryEq2">ȳ = mx̄ + b</div>
+                        <div id="theoryEq5">Md<sub>y</sub> = mMd<sub>x</sub> + b <span class="text-2xl text-emerald-700 ml-2" dir="rtl">(חציון)</span></div>
+                        <div id="theoryEq6">Mo<sub>y</sub> = mMo<sub>x</sub> + b <span class="text-2xl text-emerald-700 ml-2" dir="rtl">(השכיח)</span></div>
+                        <div id="theoryEq7">R<sub>y</sub> = |m|R<sub>x</sub> <span class="text-2xl text-emerald-700 ml-2" dir="rtl">(טווח)</span></div>
+                        <div id="theoryEq3">S<sub>y</sub> = |m|S<sub>x</sub></div>
+                        <div id="theoryEq4">S<sup>2</sup><sub>y</sub> = m<sup>2</sup>S<sup>2</sup><sub>x</sub></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center mt-12 pb-6 text-slate-700 font-bold text-3xl bg-white/50 py-4 rounded-xl shadow-sm border border-slate-200">
+            הוכן על ידי רגינה צ'ולסקי
+        </footer>
+
+    </div>
+
+    <script>
+        // Data Setup
+        const originalX = [10, 15, 20, 25, 30, 35, 40];
+        const frequencies = [3, 5, 8, 6, 4, 3, 2];
+        
+        let currentM = 1;
+        let currentB = 0;
+
+        // Viewport bounds for live axis
+        let currentMinX = -150;
+        let currentMaxX = 150;
+
+        // DOM Elements
+        const mSlider = document.getElementById('mSlider');
+        const bSlider = document.getElementById('bSlider');
+        const mValueDisplay = document.getElementById('mValueDisplay');
+        const bValueDisplay = document.getElementById('bValueDisplay');
+        const resetBtn = document.getElementById('resetBtn');
+
+        const statEls = {
+            orig: {
+                mean: document.getElementById('origMean'),
+                med: document.getElementById('origMed'),
+                mode: document.getElementById('origMode'),
+                range: document.getElementById('origRange'),
+                sd: document.getElementById('origSD'),
+                var: document.getElementById('origVar')
+            },
+            trans: {
+                mean: document.getElementById('transMean'),
+                med: document.getElementById('transMed'),
+                mode: document.getElementById('transMode'),
+                range: document.getElementById('transRange'),
+                sd: document.getElementById('transSD'),
+                var: document.getElementById('transVar')
+            }
+        };
+
+        function calcStats(xArr, fArr) {
+            let n = 0, sumXF = 0;
+            let expanded = [];
+            let maxF = -1;
+            let mode = xArr[0];
+            
+            for(let i = 0; i < xArr.length; i++) {
+                n += fArr[i];
+                sumXF += xArr[i] * fArr[i];
+                for(let j=0; j<fArr[i]; j++) {
+                    expanded.push(xArr[i]);
+                }
+                if(fArr[i] > maxF) {
+                    maxF = fArr[i];
+                    mode = xArr[i];
+                }
+            }
+            let mean = sumXF / n;
+            let sumSq = 0;
+            for(let i = 0; i < xArr.length; i++) {
+                sumSq += fArr[i] * Math.pow(xArr[i] - mean, 2);
+            }
+            let variance = sumSq / n;
+            let sd = Math.sqrt(variance);
+            
+            expanded.sort((a,b) => a-b);
+            let median;
+            if(n % 2 === 0) {
+                median = (expanded[n/2 - 1] + expanded[n/2]) / 2;
+            } else {
+                median = expanded[Math.floor(n/2)];
+            }
+            
+            let range = expanded[expanded.length - 1] - expanded[0];
+            
+            return { mean, variance, sd, n, median, mode, range };
+        }
+
+        function formatNum(num) {
+            return Number.isInteger(num) ? num.toString() : num.toFixed(2);
+        }
+
+        // Draw Unified Chart with Numbers on X Axis
+        function drawUnifiedChart(canvasId, xOrig, xTrans, freqs, origStats, transStats) {
+            const canvas = document.getElementById(canvasId);
+            if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            const parent = canvas.parentElement;
+            const rect = parent.getBoundingClientRect();
+            canvas.width = rect.width || parent.clientWidth || 800;
+            canvas.height = rect.height || parent.clientHeight || 450;
+            
+            const w = canvas.width;
+            const h = canvas.height;
+            
+            if (w === 0 || h === 0) return; 
+            
+            ctx.clearRect(0, 0, w, h);
+            
+            // שימוש בגבולות הדינמיים של תצוגת המשתמש (זום וגרירה)
+            const minX = currentMinX;
+            const maxX = currentMaxX;
+            
+            const maxY = Math.max(...freqs) + 1.5; 
+            
+            const xAxisY = h - 55; // Height of the X axis line (הורם מעט כדי לפנות מקום למספרים גדולים)
+            
+            const getX = (val) => ((val - minX) / (maxX - minX)) * w;
+            const getY = (val) => xAxisY - ((val / maxY) * (xAxisY - 60));
+            
+            // Draw X-axis line
+            ctx.beginPath();
+            ctx.moveTo(0, xAxisY);
+            ctx.lineTo(w, xAxisY);
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Calculate and draw X-axis Ticks (Numbers) - Dynamic step based on zoom
+            const range = maxX - minX;
+            const targetTicks = Math.max(2, w / 90); // About 1 tick every 90px
+            const rawStep = range / targetTicks;
+            const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+            const norm = rawStep / mag;
+            
+            // Find a nice round number for step (1, 2, 5, 10, etc.)
+            let step;
+            if (norm < 1.5) step = 1 * mag;
+            else if (norm < 3.5) step = 2 * mag;
+            else if (norm < 7.5) step = 5 * mag;
+            else step = 10 * mag;
+            
+            let startTick = Math.ceil(minX / step) * step;
+            
+            ctx.fillStyle = '#64748b';
+            ctx.font = 'bold 28px Assistant, Arial'; // Enlarge further
+            ctx.textAlign = 'center';
+            ctx.direction = 'ltr'; // Crucial: forces LTR drawing for negative signs
+            
+            for (let tick = startTick; tick <= maxX; tick += step) {
+                let px = getX(tick);
+                // Draw small tick line
+                ctx.beginPath();
+                ctx.moveTo(px, xAxisY);
+                ctx.lineTo(px, xAxisY + 10);
+                ctx.strokeStyle = '#94a3b8';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Draw number if it fits nicely
+                if (px > 30 && px < w - 30) {
+                    // Remove floating point errors and format with minus on the left
+                    let tickVal = Number(tick.toPrecision(10));
+                    let formattedTick = tickVal === 0 ? "0" : (tickVal < 0 ? "-" + Math.abs(tickVal) : tickVal.toString());
+                    ctx.fillText(formattedTick, px, xAxisY + 38);
+                }
+            }
+            
+            // Settings for drawing bars
+            const barWidth = 6;
+            ctx.lineWidth = barWidth;
+            ctx.lineCap = 'round';
+
+            // Draw Original Bars (Orange)
+            ctx.strokeStyle = 'rgba(217, 119, 6, 0.85)'; // Orange with slight transparency
+            for (let i = 0; i < xOrig.length; i++) {
+                const px = getX(xOrig[i]);
+                const py = getY(freqs[i]);
+                ctx.beginPath();
+                ctx.moveTo(px, xAxisY);
+                ctx.lineTo(px, py);
+                ctx.stroke();
+            }
+
+            // Draw Transformed Bars (Blue)
+            ctx.strokeStyle = 'rgba(37, 99, 235, 0.85)'; // Blue with slight transparency
+            for (let i = 0; i < xTrans.length; i++) {
+                // Offset the blue line slightly to the right by half a bar width so they don't hide each other when m=1 and b=0
+                const px = getX(xTrans[i]) + (barWidth / 1.5); 
+                const py = getY(freqs[i]);
+                ctx.beginPath();
+                ctx.moveTo(px, xAxisY);
+                ctx.lineTo(px, py);
+                ctx.stroke();
+            }
+
+            // Function to calculate positions and draw lines first (prevents lines from drawing over boxes)
+            const indicators = [];
+            const activeBoxes = [];
+            
+            const registerIndicator = (val, label, color) => {
+                const px = getX(val);
+                const boxW = 75; 
+                const boxH = 40; 
+                
+                let boxY = 10;
+                let collision = true;
+                // Find a Y position that doesn't overlap with existing boxes
+                while(collision && boxY < 280) {
+                    collision = false;
+                    for(let b of activeBoxes) {
+                        if(Math.abs(px - b.x) < boxW + 8 && Math.abs(boxY - b.y) < boxH + 8) {
+                            collision = true;
+                            boxY += boxH + 12;
+                            break;
+                        }
+                    }
+                }
+                activeBoxes.push({x: px, y: boxY, w: boxW, h: boxH});
+                indicators.push({px, boxY, boxW, boxH, label, color});
+            };
+
+            // Register all indicators (calculates their safe Y positions)
+            registerIndicator(origStats.mean, 'x̄', 'rgba(217, 119, 6, 1)');
+            registerIndicator(origStats.median, 'חציון', 'rgba(217, 119, 6, 1)');
+            registerIndicator(origStats.mode, 'השכיח', 'rgba(217, 119, 6, 1)');
+            
+            registerIndicator(transStats.mean, 'ȳ', 'rgba(37, 99, 235, 1)');
+            registerIndicator(transStats.median, 'חציון', 'rgba(37, 99, 235, 1)');
+            registerIndicator(transStats.mode, 'השכיח', 'rgba(37, 99, 235, 1)');
+
+            // Draw all lines down to axis
+            indicators.forEach(ind => {
+                ctx.beginPath();
+                ctx.setLineDash([4, 4]);
+                ctx.moveTo(ind.px, ind.boxY + ind.boxH);
+                ctx.lineTo(ind.px, xAxisY);
+                ctx.strokeStyle = ind.color;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            });
+            ctx.setLineDash([]); // Reset dash
+
+            // Draw all boxes (so they cover lines passing behind them)
+            indicators.forEach(ind => {
+                const boxX = ind.px - ind.boxW / 2;
+                
+                // Box Background
+                ctx.fillStyle = '#f8fafc';
+                ctx.fillRect(boxX, ind.boxY, ind.boxW, ind.boxH);
+                
+                // Box Border
+                ctx.strokeStyle = ind.color;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(boxX, ind.boxY, ind.boxW, ind.boxH);
+                
+                // Text inside box
+                ctx.fillStyle = ind.color;
+                ctx.font = 'bold 22px Assistant, Arial'; 
+                ctx.textAlign = 'center';
+                ctx.direction = 'rtl';
+                ctx.fillText(ind.label, ind.px, ind.boxY + 28);
+            });
+        }
+
+        function updateAll() {
+            // Recalculate based on m, b
+            const origStats = calcStats(originalX, frequencies);
+            const transformedX = originalX.map(x => (currentM * x) + currentB);
+            const transStats = calcStats(transformedX, frequencies);
+            
+            // Update Textual Stats Displays
+            statEls.orig.mean.textContent = formatNum(origStats.mean);
+            statEls.orig.med.textContent = formatNum(origStats.median);
+            statEls.orig.mode.textContent = formatNum(origStats.mode);
+            statEls.orig.range.textContent = formatNum(origStats.range);
+            statEls.orig.sd.textContent = formatNum(origStats.sd);
+            statEls.orig.var.textContent = formatNum(origStats.variance);
+            
+            statEls.trans.mean.textContent = formatNum(transStats.mean);
+            statEls.trans.med.textContent = formatNum(transStats.median);
+            statEls.trans.mode.textContent = formatNum(transStats.mode);
+            statEls.trans.range.textContent = formatNum(transStats.range);
+            statEls.trans.sd.textContent = formatNum(transStats.sd);
+            statEls.trans.var.textContent = formatNum(transStats.variance);
+            
+            // Redraw Unified Chart
+            drawUnifiedChart('mainCanvas', originalX, transformedX, frequencies, origStats, transStats);
+        }
+
+        function handleSliderChange() {
+            currentM = parseFloat(mSlider.value);
+            currentB = parseFloat(bSlider.value);
+            
+            mValueDisplay.textContent = Number.isInteger(currentM) ? currentM.toFixed(1) : currentM.toString();
+            bValueDisplay.textContent = (currentB > 0 ? '+' : '') + currentB.toString();
+            
+            updateAll();
+        }
+
+        // Attach listeners
+        mSlider.addEventListener('input', handleSliderChange);
+        bSlider.addEventListener('input', handleSliderChange);
+        
+        resetBtn.addEventListener('click', () => {
+            mSlider.value = 1;
+            bSlider.value = 0;
+            currentMinX = -150;
+            currentMaxX = 150;
+            handleSliderChange();
+        });
+
+        // --- Canvas Interactions (Pan & Zoom) ---
+        const canvas = document.getElementById('mainCanvas');
+        let isDragging = false;
+        let lastMouseX = 0;
+
+        function handleDragStart(x) {
+            isDragging = true;
+            lastMouseX = x;
+        }
+
+        function handleDragMove(x) {
+            if (!isDragging) return;
+            const deltaX = x - lastMouseX;
+            lastMouseX = x;
+            
+            const w = canvas.width;
+            const dataDelta = (deltaX / w) * (currentMaxX - currentMinX);
+            
+            currentMinX -= dataDelta;
+            currentMaxX -= dataDelta;
+            updateAll();
+        }
+
+        function handleDragEnd() {
+            isDragging = false;
+        }
+
+        // Mouse Pan
+        canvas.addEventListener('mousedown', (e) => handleDragStart(e.clientX));
+        window.addEventListener('mousemove', (e) => handleDragMove(e.clientX));
+        window.addEventListener('mouseup', handleDragEnd);
+
+        // Touch Pan & Pinch Zoom
+        let initialPinchDist = null;
+        let initialPinchRange = null;
+        let initialPinchCenter = null;
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                handleDragStart(e.touches[0].clientX);
+            }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                const centerX = (t1.clientX + t2.clientX) / 2;
+
+                if (initialPinchDist === null) {
+                    initialPinchDist = dist;
+                    initialPinchRange = currentMaxX - currentMinX;
+                    const rect = canvas.getBoundingClientRect();
+                    initialPinchCenter = currentMinX + ((centerX - rect.left) / canvas.width) * initialPinchRange;
+                } else {
+                    const scale = initialPinchDist / dist; 
+                    const newRange = initialPinchRange * scale;
+                    const rect = canvas.getBoundingClientRect();
+                    const mouseXRatio = (centerX - rect.left) / canvas.width;
+                    
+                    currentMinX = initialPinchCenter - mouseXRatio * newRange;
+                    currentMaxX = currentMinX + newRange;
+                    
+                    // Limit maximum zoom in
+                    if(currentMaxX - currentMinX < 2) {
+                        currentMaxX = currentMinX + 2;
+                    }
+                    
+                    updateAll();
+                }
+            } else if (isDragging && e.touches.length === 1) {
+                handleDragMove(e.touches[0].clientX);
+            }
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) initialPinchDist = null;
+            if (e.touches.length === 0) handleDragEnd();
+        });
+
+        // Mouse Wheel Zoom
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const w = canvas.width;
+
+            const dataX = currentMinX + (mouseX / w) * (currentMaxX - currentMinX);
+            const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
+            const currentRange = currentMaxX - currentMinX;
+            let newRange = currentRange * zoomFactor;
+
+            // Limit zoom ranges
+            if(newRange < 2) newRange = 2; // Max zoom in
+            if(newRange > 2000) newRange = 2000; // Max zoom out
+
+            currentMinX = dataX - (mouseX / w) * newRange;
+            currentMaxX = currentMinX + newRange;
+
+            updateAll();
+        }, { passive: false });
+
+        // Initialize and handle window resize redraws (Removed window.onload to fix missing graphs)
+        handleSliderChange();
+        window.addEventListener('resize', updateAll);
+        
+        // Force a redraw after a short delay to ensure the layout has fully rendered
+        setTimeout(updateAll, 150);
+
+    </script>
+</body>
+</html>
